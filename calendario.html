@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SurgiTrack — Calendario</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 14px; }
+
+    :root {
+      --navy:   #0d1b2a;
+      --navy2:  #132032;
+      --navy3:  #1a2d42;
+      --navy4:  #1f3550;
+      --slate:  #2e4a63;
+      --accent: #00c9a7;
+      --accent2:#00a889;
+      --amber:  #f59e0b;
+      --rose:   #f43f5e;
+      --sky:    #38bdf8;
+      --violet: #818cf8;
+      --text:   #e2ecf5;
+      --text2:  #8fafc9;
+      --text3:  #516a82;
+      --border: rgba(255,255,255,0.07);
+      --border2:rgba(255,255,255,0.12);
+      --glass:  rgba(255,255,255,0.03);
+      --glass2: rgba(255,255,255,0.06);
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+      --r-sm: 6px; --r-md: 10px; --r-lg: 16px; --r-xl: 22px;
+      --font: 'DM Sans', sans-serif;
+      --mono: 'DM Mono', monospace;
+      --ease: cubic-bezier(.4,0,.2,1);
+    }
+
+    body { font-family: var(--font); background: var(--navy); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+    /* TOPBAR */
+    #topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,27,42,0.9); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px; height: 58px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-icon { width: 32px; height: 32px; border-radius: var(--r-sm); background: linear-gradient(135deg, var(--accent), #0097e6); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .brand-name { font-weight: 600; font-size: 1rem; letter-spacing: -0.02em; }
+    .brand-name span { color: var(--accent); }
+    .phase-badge { font-family: var(--mono); font-size: 0.72rem; background: var(--glass2); border: 1px solid var(--border2); color: var(--text2); padding: 3px 10px; border-radius: 20px; }
+
+    /* LAYOUT */
+    #shell { display: grid; grid-template-columns: 224px 1fr; min-height: calc(100vh - 58px); }
+
+    /* SIDEBAR */
+    #sidebar { border-right: 1px solid var(--border); padding: 16px 12px; display: flex; flex-direction: column; gap: 2px; background: var(--navy2); overflow-y: auto; }
+    .nav-section { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; padding: 12px 10px 4px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--r-sm); cursor: pointer; color: var(--text2); font-size: 0.875rem; transition: all .18s var(--ease); border: 1px solid transparent; text-decoration: none; }
+    .nav-item:hover { background: var(--glass2); color: var(--text); }
+    .nav-item.active { background: rgba(0,201,167,0.12); color: var(--accent); border-color: rgba(0,201,167,0.2); }
+    .nav-icon { width: 18px; text-align: center; font-size: 0.9rem; }
+    .nav-divider { height: 1px; background: var(--border); margin: 6px 0; }
+
+    /* Mini calendar */
+    .mini-cal { padding: 6px 2px 10px; }
+    .mini-cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 0.78rem; font-weight: 500; color: var(--text2); }
+    .mini-nav-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 1rem; padding: 2px 5px; border-radius: 4px; transition: color .12s; }
+    .mini-nav-btn:hover { color: var(--text); }
+    .mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+    .mini-dow { font-size: 0.6rem; color: var(--text3); padding-bottom: 4px; font-weight: 600; }
+    .mini-day { font-size: 0.7rem; color: var(--text2); padding: 3px 0; border-radius: 4px; cursor: pointer; transition: all .12s; position: relative; }
+    .mini-day:hover { background: var(--glass2); color: var(--text); }
+    .mini-day.is-today { color: var(--accent); font-weight: 600; }
+    .mini-day.is-sel { background: var(--accent) !important; color: #0d1b2a !important; font-weight: 600; border-radius: 50%; }
+    .mini-day.has-s::after { content:''; position:absolute; bottom:1px; left:50%; transform:translateX(-50%); width:3px; height:3px; background: var(--sky); border-radius:50%; }
+    .mini-day.other-m { color: var(--text3); opacity:.5; }
+
+    /* Collab filters */
+    .cf-row { display: flex; align-items: center; gap: 7px; padding: 5px 8px; border-radius: var(--r-sm); cursor: pointer; transition: background .12s; font-size: 0.76rem; color: var(--text2); }
+    .cf-row:hover { background: var(--glass2); color: var(--text); }
+    .cf-row input[type=checkbox] { accent-color: var(--accent); cursor: pointer; flex-shrink:0; }
+    .av-xs { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.58rem; font-weight: 600; flex-shrink: 0; }
+
+    /* Agenda hoy */
+    .agenda-card { padding: 8px 10px; border-radius: var(--r-sm); background: var(--glass); border: 1px solid var(--border); margin-bottom: 4px; cursor: pointer; transition: border-color .15s; }
+    .agenda-card:hover { border-color: var(--border2); }
+    .agenda-time { font-family: var(--mono); font-size: 0.65rem; color: var(--text3); }
+    .agenda-name { font-size: 0.74rem; font-weight: 500; margin: 1px 0; }
+    .agenda-proc { font-size: 0.67rem; color: var(--text2); }
+
+    /* MAIN */
+    #main { display: flex; flex-direction: column; }
+
+    /* Cal header */
+    .cal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+    .cal-nav { display: flex; align-items: center; gap: 8px; }
+    .cal-title { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.03em; min-width: 190px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: var(--r-sm); font-family: var(--font); font-size: 0.79rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all .18s var(--ease); }
+    .btn-ghost { background: transparent; color: var(--text2); border-color: var(--border2); }
+    .btn-ghost:hover { background: var(--glass2); color: var(--text); }
+    .btn-primary { background: var(--accent); color: #0d1b2a; }
+    .btn-primary:hover { background: var(--accent2); box-shadow: 0 4px 14px rgba(0,201,167,0.3); }
+    .btn-icon-sm { padding: 6px 8px; }
+    .view-tabs { display: flex; gap: 2px; background: var(--navy3); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px; }
+    .view-tab { padding: 5px 11px; border-radius: 4px; font-size: 0.74rem; color: var(--text2); cursor: pointer; border: none; background: none; font-family: var(--font); transition: all .15s; }
+    .view-tab.active { background: var(--navy4); color: var(--text); }
+
+    /* Stats strip */
+    .stats-strip { display: flex; border-bottom: 1px solid var(--border); }
+    .sstat { flex: 1; padding: 9px 18px; border-right: 1px solid var(--border); }
+    .sstat:last-child { border-right: none; }
+    .sstat-lbl { font-size: 0.65rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; }
+    .sstat-val { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.03em; margin-top: 1px; }
+
+    /* MONTH VIEW */
+    #month-view { flex: 1; display: flex; flex-direction: column; }
+    .dow-row { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--border); }
+    .dow-cell { padding: 7px 0; text-align: center; font-size: 0.67rem; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); flex: 1; }
+
+    .day-cell {
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      min-height: 108px;
+      padding: 5px;
+      cursor: pointer;
+      transition: background .1s;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .day-cell:nth-child(7n) { border-right: none; }
+    .day-cell:hover { background: var(--glass); }
+    .day-cell.is-today { background: rgba(0,201,167,0.04); }
+    .day-cell.is-today .dn { background: var(--accent); color: #0d1b2a; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+    .day-cell.other-m { opacity: .3; pointer-events: none; }
+    .day-cell.is-sel { outline: 1.5px solid rgba(56,189,248,0.45); outline-offset: -1px; background: rgba(56,189,248,0.04); }
+    .day-cell.is-weekend { background: rgba(0,0,0,0.04); }
+    .dn { font-size: 0.72rem; font-weight: 500; color: var(--text2); margin-bottom: 1px; }
+
+    .chip {
+      font-size: 0.65rem; font-weight: 500; padding: 2px 5px; border-radius: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      cursor: pointer; border: none; display: flex; align-items: center; gap: 3px;
+      transition: opacity .12s; text-align: left;
+    }
+    .chip:hover { opacity: .75; }
+    .cd { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; }
+    .chip-pending  { background: rgba(245,158,11,0.15); color: var(--amber); }
+    .chip-assigned { background: rgba(56,189,248,0.15); color: var(--sky); }
+    .chip-active   { background: rgba(0,201,167,0.15); color: var(--accent); }
+    .chip-done     { background: rgba(129,140,248,0.12); color: var(--violet); }
+    .cd-pending    { background: var(--amber); }
+    .cd-assigned   { background: var(--sky); }
+    .cd-active     { background: var(--accent); box-shadow: 0 0 3px var(--accent); }
+    .cd-done       { background: var(--violet); }
+    .more-lnk { font-size: 0.61rem; color: var(--text3); padding: 1px 3px; cursor: pointer; }
+    .more-lnk:hover { color: var(--text2); }
+
+    /* WEEK VIEW */
+    #week-view { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+    .wk-header-grid { display: grid; grid-template-columns: 50px repeat(7, 1fr); border-bottom: 1px solid var(--border); }
+    .wk-corner { border-right: 1px solid var(--border); }
+    .wk-day-hd { border-right: 1px solid var(--border); padding: 8px 4px; text-align: center; }
+    .wk-day-hd:last-child { border-right: none; }
+    .wk-dn { font-size: 0.65rem; color: var(--text3); text-transform: uppercase; font-weight: 600; }
+    .wk-dd { font-size: 1rem; font-weight: 600; color: var(--text2); }
+    .wk-day-hd.wk-today .wk-dd { color: var(--accent); }
+
+    .wk-body { display: grid; grid-template-columns: 50px repeat(7, 1fr); overflow-y: auto; flex: 1; max-height: calc(100vh - 220px); }
+    .wk-hour-lbl { border-right: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px 6px 0 0; font-size: 0.62rem; color: var(--text3); font-family: var(--mono); height: 60px; }
+    .wk-slot { border-right: 1px solid var(--border); border-bottom: 1px solid rgba(255,255,255,0.03); height: 60px; position: relative; }
+    .wk-slot:last-child { border-right: none; }
+
+    .wk-block {
+      position: absolute; left: 3px; right: 3px; min-height: 38px;
+      border-radius: 5px; padding: 3px 5px; font-size: 0.64rem;
+      cursor: pointer; border-left: 3px solid transparent; overflow: hidden;
+      transition: opacity .12s;
+    }
+    .wk-block:hover { opacity: .8; }
+    .wb-pending  { background: rgba(245,158,11,0.18); border-color: var(--amber); color: var(--amber); }
+    .wb-assigned { background: rgba(56,189,248,0.18); border-color: var(--sky); color: var(--sky); }
+    .wb-active   { background: rgba(0,201,167,0.18); border-color: var(--accent); color: var(--accent); }
+    .wb-done     { background: rgba(129,140,248,0.12); border-color: var(--violet); color: var(--violet); }
+    .wb-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wb-sub { opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.6rem; }
+
+    /* DAY PANEL */
+    #day-panel {
+      position: fixed; right: 0; top: 58px; bottom: 0; width: 310px;
+      background: var(--navy2); border-left: 1px solid var(--border2);
+      transform: translateX(100%); transition: transform .24s var(--ease);
+      z-index: 150; display: flex; flex-direction: column; padding: 18px;
+      gap: 12px; overflow-y: auto;
+    }
+    #day-panel.open { transform: translateX(0); }
+    .dp-hd { display: flex; align-items: center; justify-content: space-between; }
+    .dp-title { font-size: 0.95rem; font-weight: 600; }
+    .dp-card { background: var(--navy3); border: 1px solid var(--border); border-radius: var(--r-md); padding: 11px; cursor: pointer; transition: border-color .15s; position: relative; padding-left: 14px; }
+    .dp-card:hover { border-color: var(--border2); }
+    .dp-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: var(--r-sm) 0 0 var(--r-sm); }
+    .bar-pending  { background: var(--amber); }
+    .bar-assigned { background: var(--sky); }
+    .bar-active   { background: var(--accent); }
+    .bar-done     { background: var(--violet); }
+    .dp-time { font-family: var(--mono); font-size: 0.65rem; color: var(--text3); }
+    .dp-name { font-size: 0.82rem; font-weight: 500; margin: 2px 0 1px; }
+    .dp-proc { font-size: 0.7rem; color: var(--text2); }
+    .dp-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; }
+
+    /* POPUP */
+    #popup-overlay { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
+    #popup-overlay.open { pointer-events: all; }
+    #popup-backdrop { position: absolute; inset: 0; }
+    #popup {
+      position: fixed; width: 300px;
+      background: var(--navy2); border: 1px solid var(--border2);
+      border-radius: var(--r-lg); padding: 16px; box-shadow: var(--shadow);
+      transform: scale(.94); opacity: 0; pointer-events: none;
+      transition: transform .17s var(--ease), opacity .14s;
+    }
+    #popup-overlay.open #popup { transform: scale(1); opacity: 1; pointer-events: all; }
+    .pp-hd { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+    .pp-close { background: none; border: none; color: var(--text3); font-size: 1rem; cursor: pointer; border-radius: 4px; padding: 2px 4px; }
+    .pp-close:hover { color: var(--text); }
+    .pp-lbl { font-size: 0.62rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; }
+    .pp-val { font-size: 0.78rem; color: var(--text); margin: 1px 0 7px; }
+    .steps-track { display: flex; gap: 2px; margin: 4px 0; }
+    .step-seg { flex: 1; height: 4px; border-radius: 2px; background: var(--navy4); }
+    .step-seg.done  { background: var(--accent); }
+    .step-seg.cur   { background: var(--sky); }
+
+    /* BADGES */
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 0.66rem; font-weight: 500; }
+    .badge::before { content:''; width:4px; height:4px; border-radius:50%; }
+    .badge-pending  { background:rgba(245,158,11,0.12); color:var(--amber); border:1px solid rgba(245,158,11,0.25); }
+    .badge-pending::before  { background:var(--amber); }
+    .badge-assigned { background:rgba(56,189,248,0.12); color:var(--sky); border:1px solid rgba(56,189,248,0.25); }
+    .badge-assigned::before { background:var(--sky); }
+    .badge-active   { background:rgba(0,201,167,0.12); color:var(--accent); border:1px solid rgba(0,201,167,0.25); }
+    .badge-active::before   { background:var(--accent); box-shadow:0 0 4px var(--accent); }
+    .badge-done     { background:rgba(129,140,248,0.12); color:var(--violet); border:1px solid rgba(129,140,248,0.25); }
+    .badge-done::before     { background:var(--violet); }
+
+    /* TOAST */
+    #toast-wrap { position: fixed; bottom: 22px; right: 22px; z-index: 9999; display: flex; flex-direction: column; gap: 6px; }
+    .toast { display: flex; align-items: center; gap: 9px; background: var(--navy3); border: 1px solid var(--border2); border-radius: var(--r-md); padding: 10px 14px; font-size: 0.79rem; box-shadow: var(--shadow); animation: toastIn .22s var(--ease); }
+    @keyframes toastIn { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:none; } }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--slate); border-radius: 10px; }
+
+    @media (max-width: 900px) {
+      #shell { grid-template-columns: 1fr; }
+      #sidebar { display: none; }
+      #day-panel { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <div class="brand">
+    <div class="brand-icon">🦷</div>
+    <div class="brand-name">Surgi<span>Track</span></div>
+  </div>
+  <span class="phase-badge">Fase 1 · Calendario</span>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-ghost" onclick="window.location.href='index.html'">← Cirugías</button>
+    <button class="btn btn-primary" onclick="window.location.href='index.html'">＋ Nueva cirugía</button>
+  </div>
+</div>
+
+<div id="shell">
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="nav-section">Módulos</div>
+    <a class="nav-item" href="index.html"><span class="nav-icon">🗂</span> Cirugías</a>
+    <a class="nav-item" href="#" onclick="toast('Próxima fase','info');return false"><span class="nav-icon">👥</span> Colaboradores</a>
+    <a class="nav-item active" href="#" onclick="return false"><span class="nav-icon">📅</span> Calendario</a>
+    <div class="nav-divider"></div>
+    <div class="nav-section">Navegación rápida</div>
+    <div class="mini-cal">
+      <div class="mini-cal-header">
+        <button class="mini-nav-btn" onclick="miniPrev()">‹</button>
+        <span id="mini-lbl" style="font-size:0.78rem"></span>
+        <button class="mini-nav-btn" onclick="miniNext()">›</button>
+      </div>
+      <div class="mini-grid" id="mini-grid"></div>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">Colaboradores</div>
+    <div id="cf-list"></div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">Hoy — <span id="today-lbl"></span></div>
+    <div id="agenda-today"></div>
+    <div style="margin-top:auto;padding-top:12px">
+      <a class="nav-item" href="https://github.com" target="_blank"><span class="nav-icon">🐙</span> GitHub Repo</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main id="main">
+    <!-- HEADER -->
+    <div class="cal-header">
+      <div class="cal-nav">
+        <button class="btn btn-ghost btn-icon-sm" onclick="prevPeriod()">‹</button>
+        <div class="cal-title" id="cal-title">—</div>
+        <button class="btn btn-ghost btn-icon-sm" onclick="nextPeriod()">›</button>
+        <button class="btn btn-ghost" onclick="goToday()" style="font-size:0.74rem">Hoy</button>
+      </div>
+      <div class="view-tabs">
+        <button class="view-tab active" id="tab-month" onclick="switchView('month')">Mes</button>
+        <button class="view-tab" id="tab-week" onclick="switchView('week')">Semana</button>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-strip">
+      <div class="sstat"><div class="sstat-lbl">Este mes</div><div class="sstat-val" id="ss-total" style="color:var(--text)">0</div></div>
+      <div class="sstat"><div class="sstat-lbl">Pendientes</div><div class="sstat-val" id="ss-pend" style="color:var(--amber)">0</div></div>
+      <div class="sstat"><div class="sstat-lbl">Asignadas</div><div class="sstat-val" id="ss-asgn" style="color:var(--sky)">0</div></div>
+      <div class="sstat"><div class="sstat-lbl">En pabellón</div><div class="sstat-val" id="ss-actv" style="color:var(--accent)">0</div></div>
+      <div class="sstat"><div class="sstat-lbl">Completadas</div><div class="sstat-val" id="ss-done" style="color:var(--violet)">0</div></div>
+    </div>
+
+    <!-- MONTH -->
+    <div id="month-view">
+      <div class="dow-row">
+        <div class="dow-cell">Dom</div><div class="dow-cell">Lun</div><div class="dow-cell">Mar</div>
+        <div class="dow-cell">Mié</div><div class="dow-cell">Jue</div><div class="dow-cell">Vie</div>
+        <div class="dow-cell">Sáb</div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <!-- WEEK -->
+    <div id="week-view">
+      <div class="wk-header-grid" id="wk-header"></div>
+      <div class="wk-body" id="wk-body"></div>
+    </div>
+  </main>
+</div>
+
+<!-- DAY PANEL -->
+<div id="day-panel">
+  <div class="dp-hd">
+    <div class="dp-title" id="dp-title">—</div>
+    <button class="btn btn-ghost" style="padding:4px 8px;font-size:0.73rem" onclick="closeDayPanel()">✕</button>
+  </div>
+  <div id="dp-body"></div>
+</div>
+
+<!-- POPUP -->
+<div id="popup-overlay">
+  <div id="popup-backdrop" onclick="closePopup()"></div>
+  <div id="popup"></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-wrap"></div>
+
+<script>
+/* DATA */
+const STORAGE_KEY = 'surgitrack_v1';
+let surgeries = [];
+function load() { try { surgeries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { surgeries = []; } }
+
+const COLLABS = [
+  { id:'c1', name:'Carlos Méndez',  ini:'CM', color:'#38bdf8' },
+  { id:'c2', name:'Ana Torres',     ini:'AT', color:'#00c9a7' },
+  { id:'c3', name:'Luis Vargas',    ini:'LV', color:'#818cf8' },
+  { id:'c4', name:'Sofía Reyes',    ini:'SR', color:'#f59e0b' },
+  { id:'c5', name:'Martín Castro',  ini:'MC', color:'#f43f5e' },
+];
+const activeC = new Set(COLLABS.map(c=>c.id));
+let showUnassigned = true;
+
+const MONTHS      = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MONTHS_SH   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const DAYS_SH     = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const STATUS_LBL  = { pending:'Pendiente', assigned:'Asignada', active:'En pabellón', done:'Completada' };
+const STATUS_STEP = { pending:0, assigned:2, active:3, done:5 };
+
+let currentView = 'month';
+let viewDate = new Date(2025, 2, 1);
+let miniDate = new Date(2025, 2, 1);
+let selectedDay = null;
+
+function cById(id) { return COLLABS.find(c=>c.id===id); }
+function toDS(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+
+function visible() {
+  return surgeries.filter(s => {
+    if (!s.collabId) return showUnassigned;
+    return activeC.has(s.collabId);
+  });
+}
+function onDay(ds) {
+  return visible().filter(s=>s.date.startsWith(ds)).sort((a,b)=>a.date<b.date?-1:1);
+}
+
+/* STATS */
+function renderStats() {
+  const y=viewDate.getFullYear(), m=viewDate.getMonth();
+  const ms = `${y}-${String(m+1).padStart(2,'0')}`;
+  const list = visible().filter(s=>s.date.startsWith(ms));
+  document.getElementById('ss-total').textContent = list.length;
+  document.getElementById('ss-pend').textContent  = list.filter(s=>s.status==='pending').length;
+  document.getElementById('ss-asgn').textContent  = list.filter(s=>s.status==='assigned').length;
+  document.getElementById('ss-actv').textContent  = list.filter(s=>s.status==='active').length;
+  document.getElementById('ss-done').textContent  = list.filter(s=>s.status==='done').length;
+}
+
+/* COLLAB FILTERS */
+function renderCF() {
+  const el = document.getElementById('cf-list');
+  el.innerHTML = COLLABS.map(c=>`
+    <label class="cf-row">
+      <input type="checkbox" ${activeC.has(c.id)?'checked':''} onchange="toggleC('${c.id}',this.checked)"/>
+      <div class="av-xs" style="background:${c.color}22;color:${c.color}">${c.ini}</div>
+      <span style="flex:1">${c.name}</span>
+    </label>`).join('') +
+    `<label class="cf-row">
+      <input type="checkbox" ${showUnassigned?'checked':''} onchange="toggleUnassigned(this.checked)"/>
+      <div class="av-xs" style="background:rgba(245,158,11,.15);color:var(--amber)">?</div>
+      <span style="flex:1">Sin asignar</span>
+    </label>`;
+}
+function toggleC(id, v) { if(v) activeC.add(id); else activeC.delete(id); renderAll(); }
+function toggleUnassigned(v) { showUnassigned = v; renderAll(); }
+
+/* AGENDA HOY */
+function renderAgenda() {
+  const todayD = new Date();
+  const ds = toDS(todayD);
+  document.getElementById('today-lbl').textContent = todayD.toLocaleDateString('es-CL',{day:'numeric',month:'short'});
+  const list = onDay(ds);
+  const el = document.getElementById('agenda-today');
+  if (!list.length) { el.innerHTML = `<div style="font-size:0.73rem;color:var(--text3);padding:6px 10px">Sin cirugías hoy</div>`; return; }
+  el.innerHTML = list.map(s=>{
+    const c = cById(s.collabId);
+    return `<div class="agenda-card" onclick="openPopup('${s.id}',null)">
+      <div class="agenda-time">${s.date.slice(11,16)} h</div>
+      <div class="agenda-name">${esc(s.patient)}</div>
+      <div class="agenda-proc">${esc(s.procedure)}</div>
+      ${c?`<div style="font-size:0.63rem;color:${c.color};margin-top:2px">${c.name}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+/* MINI CALENDAR */
+function renderMini() {
+  const y=miniDate.getFullYear(), m=miniDate.getMonth();
+  document.getElementById('mini-lbl').textContent = `${MONTHS_SH[m]} ${y}`;
+  const first = new Date(y,m,1).getDay();
+  const days  = new Date(y,m+1,0).getDate();
+  const prev  = new Date(y,m,0).getDate();
+  const today = toDS(new Date());
+  let html = DAYS_SH.map(d=>`<div class="mini-dow">${d[0]}</div>`).join('');
+  for (let i=0;i<first;i++) html += `<div class="mini-day other-m">${prev-first+i+1}</div>`;
+  for (let d=1;d<=days;d++) {
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const hs = visible().some(s=>s.date.startsWith(ds));
+    html += `<div class="mini-day ${ds===today?'is-today':''} ${ds===selectedDay?'is-sel':''} ${hs?'has-s':''}"
+               onclick="jumpDay('${ds}')">${d}</div>`;
+  }
+  document.getElementById('mini-grid').innerHTML = html;
+}
+function miniPrev() { miniDate.setMonth(miniDate.getMonth()-1); renderMini(); }
+function miniNext() { miniDate.setMonth(miniDate.getMonth()+1); renderMini(); }
+function jumpDay(ds) {
+  const d = new Date(ds+'T12:00');
+  viewDate = new Date(d.getFullYear(), d.getMonth(), 1);
+  selectedDay = ds;
+  renderAll();
+  openDayPanel(ds);
+}
+
+/* MONTH VIEW */
+function renderMonth() {
+  const y=viewDate.getFullYear(), m=viewDate.getMonth();
+  document.getElementById('cal-title').textContent = `${MONTHS[m]} ${y}`;
+  const first = new Date(y,m,1).getDay();
+  const daysM = new Date(y,m+1,0).getDate();
+  const prevD = new Date(y,m,0).getDate();
+  const today = toDS(new Date());
+  const total = Math.ceil((first+daysM)/7)*7;
+  let html='';
+  for(let i=0;i<total;i++){
+    let d, ds, other=false;
+    if(i<first)            { d=prevD-first+i+1; ds=toDS(new Date(y,m-1,d)); other=true; }
+    else if(i>=first+daysM){ d=i-first-daysM+1; ds=toDS(new Date(y,m+1,d)); other=true; }
+    else                   { d=i-first+1; ds=toDS(new Date(y,m,d)); }
+    const isWk = i%7===0||i%7===6;
+    const list = onDay(ds);
+    const chips = list.slice(0,3).map(s=>{
+      const t = s.date.slice(11,16);
+      const nm = s.patient.split(' ')[0];
+      return `<button class="chip chip-${s.status}" onclick="openPopup('${s.id}',event)" title="${s.patient} — ${s.procedure}">
+        <span class="cd cd-${s.status}"></span>${t} ${esc(nm)}
+      </button>`;
+    }).join('');
+    const more = list.length>3 ? `<div class="more-lnk" onclick="openDayPanel('${ds}')">+${list.length-3} más</div>` : '';
+    html += `<div class="day-cell ${other?'other-m':''} ${ds===today?'is-today':''} ${ds===selectedDay?'is-sel':''} ${isWk&&!other?'is-weekend':''}"
+                  onclick="selectDay('${ds}')">
+      <div class="dn">${d}</div>${chips}${more}
+    </div>`;
+  }
+  document.getElementById('cal-grid').innerHTML = html;
+  renderStats(); renderMini();
+}
+function selectDay(ds) { selectedDay=ds; renderMonth(); openDayPanel(ds); }
+
+/* WEEK VIEW */
+function getMonday(d) {
+  const dt=new Date(d), day=dt.getDay();
+  dt.setDate(dt.getDate()+(day===0?-6:1-day));
+  return dt;
+}
+function renderWeek() {
+  const mon = getMonday(viewDate);
+  const days=[]; for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(d.getDate()+i);days.push(d);}
+  const d0=days[0], d6=days[6];
+  document.getElementById('cal-title').textContent =
+    `${d0.getDate()} ${MONTHS_SH[d0.getMonth()]}${d0.getMonth()!==d6.getMonth()?` – ${d6.getDate()} ${MONTHS_SH[d6.getMonth()]}`:` – ${d6.getDate()}`} ${d0.getFullYear()}`;
+  const today = toDS(new Date());
+  // header
+  document.getElementById('wk-header').innerHTML =
+    `<div class="wk-corner"></div>` +
+    days.map(d=>`<div class="wk-day-hd ${toDS(d)===today?'wk-today':''}">
+      <div class="wk-dn">${DAYS_SH[d.getDay()]}</div>
+      <div class="wk-dd">${d.getDate()}</div>
+    </div>`).join('');
+  // body
+  const HOURS = Array.from({length:14},(_,i)=>i+7);
+  let html='';
+  HOURS.forEach(h=>{
+    html += `<div class="wk-hour-lbl">${String(h).padStart(2,'0')}:00</div>`;
+    days.forEach(d=>{
+      const ds=toDS(d);
+      const list=onDay(ds).filter(s=>parseInt(s.date.slice(11,13))===h);
+      const blocks=list.map(s=>{
+        const min=parseInt(s.date.slice(14,16));
+        const top=(min/60)*100;
+        const c=cById(s.collabId);
+        return `<button class="wk-block wb-${s.status}" style="top:${top}%" onclick="openPopup('${s.id}',event)">
+          <div class="wb-title">${s.date.slice(11,16)} ${esc(s.patient.split(' ')[0])}</div>
+          <div class="wb-sub">${esc(s.procedure)}</div>
+          ${c?`<div style="font-size:0.58rem;margin-top:1px;opacity:.7">${c.name.split(' ')[0]}</div>`:''}
+        </button>`;
+      }).join('');
+      html+=`<div class="wk-slot">${blocks}</div>`;
+    });
+  });
+  document.getElementById('wk-body').innerHTML=html;
+  renderStats(); renderMini();
+}
+
+/* NAV */
+function prevPeriod() {
+  if(currentView==='month') viewDate.setMonth(viewDate.getMonth()-1);
+  else viewDate.setDate(viewDate.getDate()-7);
+  miniDate=new Date(viewDate); renderAll();
+}
+function nextPeriod() {
+  if(currentView==='month') viewDate.setMonth(viewDate.getMonth()+1);
+  else viewDate.setDate(viewDate.getDate()+7);
+  miniDate=new Date(viewDate); renderAll();
+}
+function goToday() {
+  const now=new Date(); viewDate=new Date(now.getFullYear(),now.getMonth(),1);
+  miniDate=new Date(viewDate); selectedDay=toDS(now); renderAll(); openDayPanel(selectedDay);
+}
+function switchView(v) {
+  currentView=v;
+  document.getElementById('tab-month').classList.toggle('active',v==='month');
+  document.getElementById('tab-week').classList.toggle('active',v==='week');
+  document.getElementById('month-view').style.display=v==='month'?'flex':'none';
+  document.getElementById('week-view').style.display =v==='week'?'flex':'none';
+  renderAll();
+}
+
+/* DAY PANEL */
+function openDayPanel(ds) {
+  selectedDay=ds;
+  const d=new Date(ds+'T12:00');
+  document.getElementById('dp-title').textContent =
+    d.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'});
+  const list=onDay(ds);
+  const el=document.getElementById('dp-body');
+  if(!list.length){
+    el.innerHTML=`<div style="font-size:0.78rem;color:var(--text3);padding:16px 0;text-align:center">Sin cirugías agendadas</div>
+      <button class="btn btn-primary" style="width:100%" onclick="window.location.href='index.html'">＋ Agendar cirugía</button>`;
+  } else {
+    el.innerHTML=list.map(s=>{
+      const c=cById(s.collabId);
+      const done=STATUS_STEP[s.status];
+      const segs=[1,2,3,4,5].map((_,i)=>`<div class="step-seg ${i<done?'done':''} ${i===done&&done<5?'cur':''}"></div>`).join('');
+      return `<div class="dp-card" onclick="openPopup('${s.id}',null)">
+        <div class="dp-bar bar-${s.status}"></div>
+        <div class="dp-time">${s.date.slice(11,16)} h</div>
+        <div class="dp-name">${esc(s.patient)}</div>
+        <div class="dp-proc">${esc(s.procedure)}</div>
+        <div style="margin:5px 0 3px"><div class="steps-track">${segs}</div></div>
+        <div class="dp-foot">
+          <span class="badge badge-${s.status}">${STATUS_LBL[s.status]}</span>
+          ${c?`<span style="font-size:0.66rem;color:${c.color}">${c.name.split(' ')[0]}</span>`
+             :`<span style="font-size:0.66rem;color:var(--amber)">Sin asignar</span>`}
+        </div>
+      </div>`;
+    }).join('') +
+    `<button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="window.location.href='index.html'">＋ Agregar cirugía</button>`;
+  }
+  document.getElementById('day-panel').classList.add('open');
+  if(currentView==='month') renderMonth();
+}
+function closeDayPanel() { document.getElementById('day-panel').classList.remove('open'); selectedDay=null; if(currentView==='month') renderMonth(); }
+
+/* POPUP */
+function openPopup(id, event) {
+  if(event) event.stopPropagation();
+  const s=surgeries.find(x=>x.id===id); if(!s) return;
+  const c=cById(s.collabId);
+  const d=new Date(s.date);
+  const done=STATUS_STEP[s.status];
+  const stages=['Solicitud','Asignación','Preparación','En pabellón','Cierre'];
+  const segs=[1,2,3,4,5].map((_,i)=>`<div class="step-seg ${i<done?'done':''} ${i===done&&done<5?'cur':''}"></div>`).join('');
+  document.getElementById('popup').innerHTML=`
+    <div class="pp-hd">
+      <div>
+        <div style="font-family:var(--mono);font-size:0.62rem;color:var(--text3)">${s.code}</div>
+        <div style="font-size:0.88rem;font-weight:600;margin-top:2px">${esc(s.patient)}</div>
+      </div>
+      <button class="pp-close" onclick="closePopup()">✕</button>
+    </div>
+    <span class="badge badge-${s.status}" style="margin-bottom:10px;display:inline-flex">${STATUS_LBL[s.status]}</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div><div class="pp-lbl">Procedimiento</div><div class="pp-val">${esc(s.procedure)}</div></div>
+      <div><div class="pp-lbl">Hora</div><div class="pp-val">${d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}</div></div>
+      <div><div class="pp-lbl">Cirujano</div><div class="pp-val">${esc(s.surgeon)}</div></div>
+      <div><div class="pp-lbl">Hospital</div><div class="pp-val">${esc(s.hospital)}</div></div>
+    </div>
+    <div style="margin:6px 0"><div class="pp-lbl">Colaborador</div>
+      <div class="pp-val">${c?`<span style="color:${c.color}">${c.name}</span>`:'<span style="color:var(--amber)">Sin asignar</span>'}</div>
+    </div>
+    ${s.material?`<div style="margin-bottom:6px"><div class="pp-lbl">Material</div><div class="pp-val" style="font-size:0.73rem;color:var(--text2)">${esc(s.material)}</div></div>`:''}
+    <div><div class="pp-lbl">Progreso — ${stages[Math.min(done,4)]}</div><div class="steps-track">${segs}</div></div>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <button class="btn btn-primary" style="flex:1;font-size:0.74rem" onclick="window.location.href='index.html'">✏️ Editar</button>
+      <button class="btn btn-ghost" style="font-size:0.74rem" onclick="closePopup()">Cerrar</button>
+    </div>`;
+  // position
+  const pp=document.getElementById('popup');
+  pp.style.transform=''; pp.style.top=''; pp.style.left='';
+  if(event){
+    const r=event.target.getBoundingClientRect();
+    let left=r.right+12, top=r.top;
+    if(left+310>window.innerWidth-10) left=r.left-310-12;
+    if(top+360>window.innerHeight-10) top=window.innerHeight-360-10;
+    if(top<10) top=10; if(left<10) left=10;
+    pp.style.left=left+'px'; pp.style.top=top+'px';
+  } else {
+    pp.style.left='50%'; pp.style.top='50%';
+    pp.style.transform='translate(-50%,-50%) scale(1)';
+  }
+  document.getElementById('popup-overlay').classList.add('open');
+}
+function closePopup(){ document.getElementById('popup-overlay').classList.remove('open'); }
+
+/* TOAST */
+function toast(msg, type='info'){
+  const icons={success:'✅',error:'🗑',info:'ℹ️'};
+  const el=document.createElement('div');
+  el.className=`toast`; el.innerHTML=`<span>${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById('toast-wrap').appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .25s';setTimeout(()=>el.remove(),250);},3000);
+}
+
+/* KEYBOARD */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ closePopup(); closeDayPanel(); }
+  if(!e.target.closest('input')){
+    if(e.key==='ArrowLeft') prevPeriod();
+    if(e.key==='ArrowRight') nextPeriod();
+  }
+});
+
+/* RENDER ALL */
+function renderAll(){
+  renderAgenda(); renderCF();
+  if(currentView==='month') renderMonth();
+  else renderWeek();
+}
+
+/* INIT */
+load();
+document.getElementById('month-view').style.display='flex';
+document.getElementById('week-view').style.display='none';
+renderAll();
+if(!surgeries.length) toast('Sin datos. Carga el demo en index.html primero.','info');
+</script>
+</body>
+</html>
