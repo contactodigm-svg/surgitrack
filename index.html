@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SurgiTrack — Gestión de Cirugías</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── RESET & BASE ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 14px; scroll-behavior: smooth; }
+
+    /* ── TOKENS ── */
+    :root {
+      --navy:   #0d1b2a;
+      --navy2:  #132032;
+      --navy3:  #1a2d42;
+      --navy4:  #1f3550;
+      --slate:  #2e4a63;
+      --accent: #00c9a7;
+      --accent2:#00a889;
+      --amber:  #f59e0b;
+      --rose:   #f43f5e;
+      --sky:    #38bdf8;
+      --violet: #818cf8;
+      --text:   #e2ecf5;
+      --text2:  #8fafc9;
+      --text3:  #516a82;
+      --border: rgba(255,255,255,0.07);
+      --border2:rgba(255,255,255,0.12);
+      --glass:  rgba(255,255,255,0.03);
+      --glass2: rgba(255,255,255,0.06);
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+      --r-sm:   6px;
+      --r-md:   10px;
+      --r-lg:   16px;
+      --r-xl:   22px;
+      --font:   'DM Sans', sans-serif;
+      --mono:   'DM Mono', monospace;
+      --ease:   cubic-bezier(.4,0,.2,1);
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--navy);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.55;
+      overflow-x: hidden;
+    }
+
+    /* ── TOPBAR ── */
+    #topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,27,42,0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 58px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-icon {
+      width: 32px; height: 32px; border-radius: var(--r-sm);
+      background: linear-gradient(135deg, var(--accent), #0097e6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .brand-name { font-weight: 600; font-size: 1rem; letter-spacing: -0.02em; }
+    .brand-name span { color: var(--accent); }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .phase-badge {
+      font-family: var(--mono); font-size: 0.72rem;
+      background: var(--glass2); border: 1px solid var(--border2);
+      color: var(--text2); padding: 3px 10px; border-radius: 20px;
+    }
+
+    /* ── LAYOUT ── */
+    #shell {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      min-height: calc(100vh - 58px);
+    }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      border-right: 1px solid var(--border);
+      padding: 20px 14px;
+      display: flex; flex-direction: column; gap: 4px;
+      background: var(--navy2);
+    }
+    .nav-section { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; padding: 12px 10px 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; border-radius: var(--r-sm);
+      cursor: pointer; color: var(--text2); font-size: 0.875rem;
+      transition: all .18s var(--ease); border: 1px solid transparent;
+      text-decoration: none;
+    }
+    .nav-item:hover { background: var(--glass2); color: var(--text); }
+    .nav-item.active { background: rgba(0,201,167,0.12); color: var(--accent); border-color: rgba(0,201,167,0.2); }
+    .nav-icon { width: 18px; text-align: center; font-size: 0.9rem; }
+    .nav-badge {
+      margin-left: auto; font-family: var(--mono); font-size: 0.68rem;
+      background: var(--navy4); color: var(--text2); padding: 1px 7px;
+      border-radius: 20px; border: 1px solid var(--border2);
+    }
+    .nav-divider { height: 1px; background: var(--border); margin: 8px 0; }
+    .sidebar-bottom { margin-top: auto; }
+    .collab-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: var(--r-sm);
+      cursor: pointer; transition: background .15s;
+      font-size: 0.8rem; color: var(--text2);
+    }
+    .collab-chip:hover { background: var(--glass2); color: var(--text); }
+    .avatar-xs {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 600; flex-shrink: 0;
+    }
+
+    /* ── MAIN CONTENT ── */
+    #main { padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* ── PAGE HEADER ── */
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .page-title { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.03em; }
+    .page-subtitle { font-size: 0.8rem; color: var(--text2); margin-top: 2px; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: var(--r-sm); font-family: var(--font);
+      font-size: 0.82rem; font-weight: 500; cursor: pointer;
+      border: 1px solid transparent; transition: all .18s var(--ease);
+    }
+    .btn-primary {
+      background: var(--accent); color: #0d1b2a; border-color: var(--accent);
+    }
+    .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,201,167,0.3); }
+    .btn-ghost { background: transparent; color: var(--text2); border-color: var(--border2); }
+    .btn-ghost:hover { background: var(--glass2); color: var(--text); }
+    .btn-danger { background: transparent; color: var(--rose); border-color: rgba(244,63,94,0.3); }
+    .btn-danger:hover { background: rgba(244,63,94,0.1); }
+    .btn-sm { padding: 5px 10px; font-size: 0.75rem; }
+    .btn-icon { padding: 7px; border-radius: var(--r-sm); }
+
+    /* ── STATS ── */
+    .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .stat-card {
+      background: var(--navy3); border: 1px solid var(--border);
+      border-radius: var(--r-md); padding: 14px 16px;
+      transition: border-color .2s;
+    }
+    .stat-card:hover { border-color: var(--border2); }
+    .stat-label { font-size: 0.7rem; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .stat-value { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+    .stat-sub { font-size: 0.7rem; color: var(--text3); margin-top: 4px; }
+
+    /* ── FILTERS BAR ── */
+    .filters-bar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      background: var(--navy3); border: 1px solid var(--border);
+      border-radius: var(--r-md); padding: 10px 14px;
+    }
+    .search-wrap { position: relative; flex: 1; min-width: 180px; }
+    .search-wrap input {
+      width: 100%; background: var(--navy4); border: 1px solid var(--border);
+      border-radius: var(--r-sm); color: var(--text); font-family: var(--font);
+      font-size: 0.82rem; padding: 7px 10px 7px 32px;
+      outline: none; transition: border-color .15s;
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-wrap input::placeholder { color: var(--text3); }
+    .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 0.85rem; pointer-events: none; }
+    .filter-select {
+      background: var(--navy4); border: 1px solid var(--border);
+      border-radius: var(--r-sm); color: var(--text2); font-family: var(--font);
+      font-size: 0.78rem; padding: 7px 10px; outline: none; cursor: pointer;
+      transition: border-color .15s;
+    }
+    .filter-select:focus { border-color: var(--accent); color: var(--text); }
+    .filter-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+    .fchip {
+      padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 500;
+      cursor: pointer; border: 1px solid var(--border2); color: var(--text2);
+      background: transparent; transition: all .15s; white-space: nowrap;
+    }
+    .fchip.active-all   { background: rgba(255,255,255,0.1); color: var(--text); border-color: var(--border2); }
+    .fchip.active-pending  { background: rgba(245,158,11,0.15); color: var(--amber); border-color: rgba(245,158,11,0.3); }
+    .fchip.active-assigned { background: rgba(56,189,248,0.15); color: var(--sky); border-color: rgba(56,189,248,0.3); }
+    .fchip.active-active   { background: rgba(0,201,167,0.15); color: var(--accent); border-color: rgba(0,201,167,0.3); }
+    .fchip.active-done     { background: rgba(129,140,248,0.15); color: var(--violet); border-color: rgba(129,140,248,0.3); }
+    .fchip:not([class*="active"]):hover { background: var(--glass2); color: var(--text); }
+
+    /* ── TABLE ── */
+    .table-wrap { background: var(--navy3); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-bottom: 1px solid var(--border); }
+    thead th {
+      padding: 11px 14px; text-align: left; font-size: 0.7rem;
+      font-weight: 600; color: var(--text3); text-transform: uppercase;
+      letter-spacing: 0.07em; white-space: nowrap;
+    }
+    thead th.sortable { cursor: pointer; user-select: none; }
+    thead th.sortable:hover { color: var(--text2); }
+    tbody tr {
+      border-bottom: 1px solid var(--border); transition: background .12s;
+      cursor: pointer;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--glass); }
+    tbody tr.row-selected { background: rgba(0,201,167,0.06); }
+    td { padding: 11px 14px; font-size: 0.82rem; vertical-align: middle; }
+    .td-code { font-family: var(--mono); font-size: 0.72rem; color: var(--text3); }
+    .td-title { font-weight: 500; color: var(--text); }
+    .td-sub { font-size: 0.72rem; color: var(--text2); margin-top: 1px; }
+    .td-actions { display: flex; gap: 4px; justify-content: flex-end; }
+    .empty-state { text-align: center; padding: 48px 20px; color: var(--text3); }
+    .empty-icon { font-size: 2rem; margin-bottom: 8px; }
+    .empty-text { font-size: 0.85rem; }
+
+    /* ── STATUS BADGES ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: 20px; font-size: 0.7rem; font-weight: 500;
+      white-space: nowrap;
+    }
+    .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+    .badge-pending  { background: rgba(245,158,11,0.12); color: var(--amber);  border: 1px solid rgba(245,158,11,0.25); }
+    .badge-pending::before  { background: var(--amber); }
+    .badge-assigned { background: rgba(56,189,248,0.12); color: var(--sky);    border: 1px solid rgba(56,189,248,0.25); }
+    .badge-assigned::before { background: var(--sky); }
+    .badge-active   { background: rgba(0,201,167,0.12); color: var(--accent);  border: 1px solid rgba(0,201,167,0.25); }
+    .badge-active::before   { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+    .badge-done     { background: rgba(129,140,248,0.12); color: var(--violet); border: 1px solid rgba(129,140,248,0.25); }
+    .badge-done::before     { background: var(--violet); }
+
+    /* ── PRIORITY ── */
+    .prio { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+    .prio-alta   { background: var(--rose); box-shadow: 0 0 5px var(--rose); }
+    .prio-media  { background: var(--amber); }
+    .prio-baja   { background: var(--text3); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(6px); z-index: 300;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+      opacity: 0; pointer-events: none; transition: opacity .2s var(--ease);
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--navy2); border: 1px solid var(--border2);
+      border-radius: var(--r-xl); padding: 28px; width: 100%; max-width: 560px;
+      max-height: 90vh; overflow-y: auto;
+      transform: translateY(20px) scale(0.98);
+      transition: transform .22s var(--ease);
+      box-shadow: var(--shadow);
+    }
+    .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+    .modal-title { font-size: 1.1rem; font-weight: 600; letter-spacing: -0.02em; }
+    .modal-close { background: none; border: none; color: var(--text3); font-size: 1.2rem; cursor: pointer; padding: 4px; border-radius: var(--r-sm); transition: color .15s; }
+    .modal-close:hover { color: var(--text); }
+
+    /* ── FORM ── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-full { grid-column: 1 / -1; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 0.72rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; }
+    .field input, .field select, .field textarea {
+      background: var(--navy4); border: 1px solid var(--border2);
+      border-radius: var(--r-sm); color: var(--text); font-family: var(--font);
+      font-size: 0.85rem; padding: 9px 12px; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,201,167,0.12);
+    }
+    .field input::placeholder, .field textarea::placeholder { color: var(--text3); }
+    .field select option { background: var(--navy4); }
+    .field textarea { resize: vertical; min-height: 72px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .required { color: var(--rose); margin-left: 2px; }
+
+    /* ── DETAIL PANEL (slide-in) ── */
+    #detail-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      pointer-events: none;
+    }
+    #detail-overlay.open { pointer-events: all; }
+    #detail-overlay .backdrop {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+      opacity: 0; transition: opacity .2s;
+    }
+    #detail-overlay.open .backdrop { opacity: 1; }
+    #detail-panel {
+      position: absolute; right: 0; top: 0; bottom: 0; width: 380px;
+      background: var(--navy2); border-left: 1px solid var(--border2);
+      padding: 24px; overflow-y: auto;
+      transform: translateX(100%); transition: transform .25s var(--ease);
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    #detail-overlay.open #detail-panel { transform: translateX(0); }
+    .detail-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .detail-field { }
+    .detail-field .dl { font-size: 0.68rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; margin-bottom: 3px; }
+    .detail-field .dv { font-size: 0.83rem; color: var(--text); }
+    .steps-track { display: flex; gap: 0; border-radius: var(--r-sm); overflow: hidden; }
+    .step-seg {
+      flex: 1; height: 5px;
+      background: var(--navy4);
+      border-right: 1px solid var(--navy2);
+      transition: background .3s;
+    }
+    .step-seg.done  { background: var(--accent); }
+    .step-seg.active{ background: var(--sky); }
+
+    /* ── TOAST ── */
+    #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+    .toast {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--navy3); border: 1px solid var(--border2);
+      border-radius: var(--r-md); padding: 12px 16px;
+      font-size: 0.82rem; color: var(--text);
+      box-shadow: var(--shadow); min-width: 220px;
+      animation: toastIn .25s var(--ease) forwards;
+    }
+    @keyframes toastIn { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform:none; } }
+    .toast-success .toast-icon { color: var(--accent); }
+    .toast-error   .toast-icon { color: var(--rose); }
+    .toast-info    .toast-icon { color: var(--sky); }
+
+    /* ── CONFIRM MODAL ── */
+    #confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 400; align-items: center; justify-content: center; }
+    #confirm-overlay.open { display: flex; }
+    #confirm-box { background: var(--navy2); border: 1px solid var(--border2); border-radius: var(--r-lg); padding: 24px; max-width: 380px; text-align: center; }
+    #confirm-box h3 { font-size: 1rem; margin-bottom: 8px; }
+    #confirm-box p { font-size: 0.82rem; color: var(--text2); margin-bottom: 20px; }
+    #confirm-box .btn-row { display: flex; gap: 8px; justify-content: center; }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--slate); border-radius: 10px; }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform:none; } }
+    .fade-up { animation: fadeUp .28s var(--ease) both; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      #shell { grid-template-columns: 1fr; }
+      #sidebar { display: none; }
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+      #detail-panel { width: 100%; }
+    }
+    @media (max-width: 600px) {
+      #main { padding: 14px; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── TOPBAR ── -->
+<div id="topbar">
+  <div class="brand">
+    <div class="brand-icon">🦷</div>
+    <div class="brand-name">Surgi<span>Track</span></div>
+  </div>
+  <div class="topbar-right">
+    <span class="phase-badge">Fase 1 · CRUD</span>
+    <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Exportar CSV</button>
+  </div>
+</div>
+
+<!-- ── SHELL ── -->
+<div id="shell">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="nav-section">Módulos</div>
+    <a class="nav-item active" href="#" onclick="return false">
+      <span class="nav-icon">🗂</span> Cirugías
+      <span class="nav-badge" id="nav-total">0</span>
+    </a>
+    <a class="nav-item" href="#" onclick="showToast('Colaboradores · Próxima fase','info'); return false">
+      <span class="nav-icon">👥</span> Colaboradores
+    </a>
+    <a class="nav-item" href="#" onclick="showToast('Calendario · Próxima fase','info'); return false">
+      <span class="nav-icon">📅</span> Calendario
+    </a>
+    <a class="nav-item" href="#" onclick="showToast('Materiales · Próxima fase','info'); return false">
+      <span class="nav-icon">📦</span> Materiales
+    </a>
+    <div class="nav-divider"></div>
+    <div class="nav-section">Colaboradores</div>
+    <div id="sidebar-collabs"></div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">Accesos rápidos</div>
+    <a class="nav-item" href="#" onclick="openModal(); return false">
+      <span class="nav-icon">➕</span> Nueva cirugía
+    </a>
+    <a class="nav-item" href="#" onclick="exportCSV(); return false">
+      <span class="nav-icon">⬇</span> Exportar CSV
+    </a>
+    <div class="sidebar-bottom">
+      <a class="nav-item" href="https://github.com" target="_blank">
+        <span class="nav-icon">🐙</span> GitHub Repo
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main id="main">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header fade-up">
+      <div>
+        <div class="page-title">Cirugías</div>
+        <div class="page-subtitle" id="page-subtitle">Cargando...</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="seedDemo()" title="Cargar datos de demostración">🔄 Demo</button>
+        <button class="btn btn-primary" onclick="openModal()">
+          <span>＋</span> Nueva cirugía
+        </button>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-row fade-up" style="animation-delay:.05s" id="stats-row">
+      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="s-total">0</div><div class="stat-sub">cirugías</div></div>
+      <div class="stat-card"><div class="stat-label">Pendientes</div><div class="stat-value" style="color:var(--amber)" id="s-pending">0</div><div class="stat-sub">sin asignar</div></div>
+      <div class="stat-card"><div class="stat-label">Asignadas</div><div class="stat-value" style="color:var(--sky)" id="s-assigned">0</div><div class="stat-sub">colaborador ok</div></div>
+      <div class="stat-card"><div class="stat-label">En pabellón</div><div class="stat-value" style="color:var(--accent)" id="s-active">0</div><div class="stat-sub">en curso</div></div>
+      <div class="stat-card"><div class="stat-label">Completadas</div><div class="stat-value" style="color:var(--violet)" id="s-done">0</div><div class="stat-sub">este mes</div></div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters-bar fade-up" style="animation-delay:.08s">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Buscar por paciente, cirujano, hospital..." oninput="renderTable()" />
+      </div>
+      <select class="filter-select" id="filter-collab" onchange="renderTable()">
+        <option value="">Todos los colaboradores</option>
+      </select>
+      <select class="filter-select" id="filter-month" onchange="renderTable()">
+        <option value="">Todos los meses</option>
+      </select>
+      <div class="filter-chips">
+        <button class="fchip active-all" data-status="all"    onclick="setStatusFilter('all')">Todos</button>
+        <button class="fchip" data-status="pending"  onclick="setStatusFilter('pending')">Pendiente</button>
+        <button class="fchip" data-status="assigned" onclick="setStatusFilter('assigned')">Asignada</button>
+        <button class="fchip" data-status="active"   onclick="setStatusFilter('active')">En pabellón</button>
+        <button class="fchip" data-status="done"     onclick="setStatusFilter('done')">Completada</button>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap fade-up" style="animation-delay:.12s">
+      <table id="main-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th class="sortable" onclick="sortBy('date')">Fecha ↕</th>
+            <th>Paciente / Procedimiento</th>
+            <th>Cirujano</th>
+            <th>Hospital</th>
+            <th>Colaborador</th>
+            <th>Estado</th>
+            <th>Prioridad</th>
+            <th style="text-align:right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🗂</div><div class="empty-text">No hay cirugías. Haz clic en "Demo" o "Nueva cirugía".</div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── MODAL CREAR / EDITAR ── -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOnBg(event)">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Nueva cirugía</div>
+      <button class="modal-close" onclick="closeModal()" aria-label="Cerrar">✕</button>
+    </div>
+    <form id="surgery-form" onsubmit="saveSurgery(event)">
+      <div class="form-grid">
+        <div class="field form-full">
+          <label>Paciente <span class="required">*</span></label>
+          <input type="text" id="f-patient" placeholder="Nombre completo" required />
+        </div>
+        <div class="field">
+          <label>Procedimiento <span class="required">*</span></label>
+          <input type="text" id="f-procedure" placeholder="Ej: Artrodesis tobillo" required />
+        </div>
+        <div class="field">
+          <label>Fecha / Hora <span class="required">*</span></label>
+          <input type="datetime-local" id="f-date" required />
+        </div>
+        <div class="field">
+          <label>Cirujano <span class="required">*</span></label>
+          <input type="text" id="f-surgeon" placeholder="Dr./Dra." required />
+        </div>
+        <div class="field">
+          <label>Hospital / Clínica <span class="required">*</span></label>
+          <input type="text" id="f-hospital" placeholder="Nombre del centro" required />
+        </div>
+        <div class="field">
+          <label>Colaborador asignado</label>
+          <select id="f-collab">
+            <option value="">Sin asignar</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Estado</label>
+          <select id="f-status">
+            <option value="pending">Pendiente</option>
+            <option value="assigned">Asignada</option>
+            <option value="active">En pabellón</option>
+            <option value="done">Completada</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Prioridad</label>
+          <select id="f-priority">
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+            <option value="baja">Baja</option>
+          </select>
+        </div>
+        <div class="field form-full">
+          <label>Material quirúrgico</label>
+          <input type="text" id="f-material" placeholder="Ej: Placa DePuy 3.5mm, Tornillos Synthes..." />
+        </div>
+        <div class="field form-full">
+          <label>Notas</label>
+          <textarea id="f-notes" placeholder="Observaciones, indicaciones especiales..."></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btn-save">Guardar cirugía</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── DETAIL SLIDE PANEL ── -->
+<div id="detail-overlay" onclick="closeDetail(event)">
+  <div class="backdrop"></div>
+  <div id="detail-panel"></div>
+</div>
+
+<!-- ── CONFIRM MODAL ── -->
+<div id="confirm-overlay">
+  <div id="confirm-box">
+    <h3>Eliminar cirugía</h3>
+    <p id="confirm-msg">¿Estás seguro? Esta acción no se puede deshacer.</p>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-ok">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div id="toast-container"></div>
+
+<!-- ── SCRIPT ── -->
+<script>
+/* ── STATE ── */
+const STORAGE_KEY = 'surgitrack_v1';
+let surgeries = [];
+let collabs = [
+  { id: 'c1', name: 'Carlos Méndez',  initials: 'CM', color: '#38bdf8' },
+  { id: 'c2', name: 'Ana Torres',     initials: 'AT', color: '#00c9a7' },
+  { id: 'c3', name: 'Luis Vargas',    initials: 'LV', color: '#818cf8' },
+  { id: 'c4', name: 'Sofía Reyes',    initials: 'SR', color: '#f59e0b' },
+  { id: 'c5', name: 'Martín Castro',  initials: 'MC', color: '#f43f5e' },
+];
+let currentFilter = 'all';
+let sortField = 'date';
+let sortDir = 1;
+let editingId = null;
+let confirmCb = null;
+
+/* ── PERSISTENCE ── */
+function load() {
+  try { surgeries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { surgeries = []; }
+}
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(surgeries)); }
+
+/* ── ID & CODE ── */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function makeCode(date) {
+  const d = new Date(date);
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  const yy = String(d.getFullYear()).slice(2);
+  return `CX-${yy}${mm}${dd}-${Math.floor(Math.random()*900+100)}`;
+}
+
+/* ── STATUS HELPERS ── */
+const STATUS_LABEL = { pending:'Pendiente', assigned:'Asignada', active:'En pabellón', done:'Completada' };
+const STATUS_STEPS = { pending:0, assigned:2, active:3, done:5 };
+const PRIO_LABEL   = { alta:'Alta', media:'Media', baja:'Baja' };
+
+function collabById(id) { return collabs.find(c => c.id === id); }
+
+/* ── RENDER STATS ── */
+function renderStats() {
+  const total    = surgeries.length;
+  const pending  = surgeries.filter(s=>s.status==='pending').length;
+  const assigned = surgeries.filter(s=>s.status==='assigned').length;
+  const active   = surgeries.filter(s=>s.status==='active').length;
+  const done     = surgeries.filter(s=>s.status==='done').length;
+  document.getElementById('s-total').textContent   = total;
+  document.getElementById('s-pending').textContent  = pending;
+  document.getElementById('s-assigned').textContent = assigned;
+  document.getElementById('s-active').textContent   = active;
+  document.getElementById('s-done').textContent     = done;
+  document.getElementById('nav-total').textContent  = total;
+  document.getElementById('page-subtitle').textContent =
+    `${total} cirugía${total!==1?'s':''} · ${pending} pendiente${pending!==1?'s':''} sin asignar`;
+}
+
+/* ── RENDER SIDEBAR COLLABS ── */
+function renderSidebarCollabs() {
+  const counts = {};
+  surgeries.forEach(s => { if (s.collabId) counts[s.collabId] = (counts[s.collabId]||0)+1; });
+  const el = document.getElementById('sidebar-collabs');
+  el.innerHTML = collabs.map(c => `
+    <div class="collab-chip">
+      <div class="avatar-xs" style="background:${c.color}22;color:${c.color}">${c.initials}</div>
+      <span style="flex:1;font-size:0.78rem">${c.name}</span>
+      <span style="font-size:0.7rem;color:var(--text3)">${counts[c.id]||0}</span>
+    </div>`).join('');
+}
+
+/* ── POPULATE SELECTS ── */
+function populateSelects() {
+  const collabSel = document.getElementById('f-collab');
+  const filterSel = document.getElementById('filter-collab');
+  const optHTML = collabs.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  collabSel.innerHTML = '<option value="">Sin asignar</option>' + optHTML;
+  filterSel.innerHTML = '<option value="">Todos los colaboradores</option>' + optHTML;
+
+  // months
+  const months = new Set(surgeries.map(s => s.date.slice(0,7)));
+  const filterMonth = document.getElementById('filter-month');
+  const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  filterMonth.innerHTML = '<option value="">Todos los meses</option>' +
+    [...months].sort().map(m => {
+      const [y,mo] = m.split('-');
+      return `<option value="${m}">${monthNames[parseInt(mo)-1]} ${y}</option>`;
+    }).join('');
+}
+
+/* ── FILTERS ── */
+function setStatusFilter(status) {
+  currentFilter = status;
+  document.querySelectorAll('.fchip').forEach(b => {
+    const s = b.dataset.status;
+    b.className = 'fchip' + (s === status ? ` active-${s}` : '');
+  });
+  renderTable();
+}
+
+function getFiltered() {
+  const q     = document.getElementById('search-input').value.toLowerCase();
+  const coll  = document.getElementById('filter-collab').value;
+  const month = document.getElementById('filter-month').value;
+  return surgeries.filter(s => {
+    if (currentFilter !== 'all' && s.status !== currentFilter) return false;
+    if (coll  && s.collabId !== coll) return false;
+    if (month && !s.date.startsWith(month)) return false;
+    if (q) {
+      const hay = [s.patient, s.procedure, s.surgeon, s.hospital, s.material, s.notes]
+        .join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+/* ── SORT ── */
+function sortBy(field) {
+  if (sortField === field) sortDir *= -1; else { sortField = field; sortDir = 1; }
+  renderTable();
+}
+function getSorted(arr) {
+  return [...arr].sort((a,b) => {
+    let va = a[sortField]||'', vb = b[sortField]||'';
+    return va < vb ? -sortDir : va > vb ? sortDir : 0;
+  });
+}
+
+/* ── RENDER TABLE ── */
+function renderTable() {
+  const filtered = getSorted(getFiltered());
+  const body = document.getElementById('table-body');
+  if (!filtered.length) {
+    body.innerHTML = `<tr><td colspan="9"><div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-text">Sin resultados con los filtros actuales.</div>
+    </div></td></tr>`;
+    renderStats(); renderSidebarCollabs(); return;
+  }
+  body.innerHTML = filtered.map(s => {
+    const c = collabById(s.collabId);
+    const d = new Date(s.date);
+    const dateStr = d.toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'2-digit'});
+    const timeStr = d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+    const collabCell = c
+      ? `<div style="display:flex;align-items:center;gap:6px">
+           <div class="avatar-xs" style="background:${c.color}22;color:${c.color}">${c.initials}</div>
+           <span style="font-size:0.78rem">${c.name.split(' ')[0]}</span>
+         </div>`
+      : `<span style="color:var(--amber);font-size:0.78rem">Sin asignar</span>`;
+    return `<tr onclick="showDetail('${s.id}')">
+      <td><span class="td-code">${s.code}</span></td>
+      <td><div style="font-size:0.8rem;font-weight:500">${dateStr}</div><div class="td-sub">${timeStr}</div></td>
+      <td><div class="td-title">${esc(s.patient)}</div><div class="td-sub">${esc(s.procedure)}</div></td>
+      <td><div style="font-size:0.82rem">${esc(s.surgeon)}</div></td>
+      <td><div style="font-size:0.82rem">${esc(s.hospital)}</div></td>
+      <td>${collabCell}</td>
+      <td><span class="badge badge-${s.status}">${STATUS_LABEL[s.status]}</span></td>
+      <td><span class="prio prio-${s.priority}" title="${PRIO_LABEL[s.priority]}"></span></td>
+      <td>
+        <div class="td-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openModal('${s.id}')">✏️</button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Eliminar" onclick="confirmDelete('${s.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  renderStats();
+  renderSidebarCollabs();
+  populateSelects();
+}
+
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── MODAL ── */
+function openModal(id) {
+  editingId = id || null;
+  document.getElementById('modal-title').textContent = editingId ? 'Editar cirugía' : 'Nueva cirugía';
+  document.getElementById('btn-save').textContent = editingId ? 'Guardar cambios' : 'Guardar cirugía';
+  const form = document.getElementById('surgery-form');
+  form.reset();
+  populateSelects();
+  if (editingId) {
+    const s = surgeries.find(x=>x.id===editingId);
+    if (!s) return;
+    document.getElementById('f-patient').value   = s.patient;
+    document.getElementById('f-procedure').value = s.procedure;
+    document.getElementById('f-date').value      = s.date;
+    document.getElementById('f-surgeon').value   = s.surgeon;
+    document.getElementById('f-hospital').value  = s.hospital;
+    document.getElementById('f-collab').value    = s.collabId || '';
+    document.getElementById('f-status').value    = s.status;
+    document.getElementById('f-priority').value  = s.priority;
+    document.getElementById('f-material').value  = s.material || '';
+    document.getElementById('f-notes').value     = s.notes || '';
+  } else {
+    const now = new Date();
+    now.setMinutes(0,0,0);
+    document.getElementById('f-date').value = now.toISOString().slice(0,16);
+    document.getElementById('f-priority').value = 'media';
+  }
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-patient').focus(), 80);
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); editingId=null; }
+function closeModalOnBg(e) { if (e.target.id==='modal-overlay') closeModal(); }
+document.addEventListener('keydown', e => { if (e.key==='Escape') { closeModal(); closeDetail(); } });
+
+/* ── SAVE ── */
+function saveSurgery(e) {
+  e.preventDefault();
+  const collabId = document.getElementById('f-collab').value;
+  const status   = document.getElementById('f-status').value;
+  const auto = (collabId && status==='pending') ? 'assigned' : status;
+
+  const data = {
+    patient:   document.getElementById('f-patient').value.trim(),
+    procedure: document.getElementById('f-procedure').value.trim(),
+    date:      document.getElementById('f-date').value,
+    surgeon:   document.getElementById('f-surgeon').value.trim(),
+    hospital:  document.getElementById('f-hospital').value.trim(),
+    collabId,
+    status:    auto,
+    priority:  document.getElementById('f-priority').value,
+    material:  document.getElementById('f-material').value.trim(),
+    notes:     document.getElementById('f-notes').value.trim(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (editingId) {
+    const idx = surgeries.findIndex(x=>x.id===editingId);
+    surgeries[idx] = { ...surgeries[idx], ...data };
+    showToast('Cirugía actualizada correctamente', 'success');
+  } else {
+    data.id = uid();
+    data.code = makeCode(data.date);
+    data.createdAt = data.updatedAt;
+    surgeries.unshift(data);
+    showToast('Cirugía creada correctamente', 'success');
+  }
+  save();
+  closeModal();
+  renderTable();
+}
+
+/* ── DELETE ── */
+function confirmDelete(id) {
+  const s = surgeries.find(x=>x.id===id);
+  document.getElementById('confirm-msg').textContent =
+    `¿Eliminar la cirugía de ${s?.patient} (${s?.procedure})?`;
+  document.getElementById('confirm-ok').onclick = () => { doDelete(id); closeConfirm(); };
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+function closeConfirm() { document.getElementById('confirm-overlay').classList.remove('open'); }
+function doDelete(id) {
+  surgeries = surgeries.filter(x=>x.id!==id);
+  save(); renderTable();
+  showToast('Cirugía eliminada', 'error');
+}
+
+/* ── DETAIL PANEL ── */
+function showDetail(id) {
+  const s = surgeries.find(x=>x.id===id);
+  if (!s) return;
+  const c = collabById(s.collabId);
+  const d = new Date(s.date);
+  const done = STATUS_STEPS[s.status];
+  const stages = ['Solicitud','Asignación','Preparación','En pabellón','Cierre'];
+  const segs = [1,2,3,4,5].map((n,i)=>
+    `<div class="step-seg ${i<done?'done':''} ${i===done&&done<5?'active':''}"></div>`).join('');
+  document.getElementById('detail-panel').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-family:var(--mono);font-size:0.72rem;color:var(--text3)">${s.code}</span>
+      <button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕</button>
+    </div>
+    <div>
+      <div style="font-size:1.1rem;font-weight:600;letter-spacing:-0.02em">${esc(s.patient)}</div>
+      <div style="font-size:0.82rem;color:var(--text2);margin-top:2px">${esc(s.procedure)}</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="badge badge-${s.status}">${STATUS_LABEL[s.status]}</span>
+      <span style="font-size:0.72rem;color:var(--text3)">Prioridad <strong style="color:var(--text2)">${PRIO_LABEL[s.priority]}</strong></span>
+    </div>
+    <div>
+      <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Progreso</div>
+      <div class="steps-track">${segs}</div>
+      <div style="font-size:0.72rem;color:var(--text3);margin-top:5px">Etapa: ${stages[Math.min(done,4)]}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-field"><div class="dl">Fecha</div><div class="dv">${d.toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'long'})}</div></div>
+      <div class="detail-field"><div class="dl">Hora</div><div class="dv">${d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}</div></div>
+      <div class="detail-field"><div class="dl">Cirujano</div><div class="dv">${esc(s.surgeon)}</div></div>
+      <div class="detail-field"><div class="dl">Hospital</div><div class="dv">${esc(s.hospital)}</div></div>
+    </div>
+    <div class="detail-field">
+      <div class="dl">Colaborador</div>
+      <div class="dv">${c
+        ? `<div style="display:flex;align-items:center;gap:8px;margin-top:3px"><div class="avatar-xs" style="background:${c.color}22;color:${c.color}">${c.initials}</div>${c.name}</div>`
+        : '<span style="color:var(--amber)">Sin asignar</span>'}</div>
+    </div>
+    ${s.material?`<div class="detail-field"><div class="dl">Material</div><div class="dv">${esc(s.material)}</div></div>`:''}
+    ${s.notes?`<div class="detail-field"><div class="dl">Notas</div><div class="dv" style="color:var(--text2)">${esc(s.notes)}</div></div>`:''}
+    <div style="margin-top:auto;display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-primary" style="flex:1" onclick="openModal('${s.id}');closeDetail()">✏️ Editar</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="advanceStatus('${s.id}')">▶ Avanzar estado</button>
+    </div>
+    <div style="font-size:0.68rem;color:var(--text3)">Creada ${new Date(s.createdAt).toLocaleDateString('es-CL')} · Actualizada ${new Date(s.updatedAt).toLocaleDateString('es-CL')}</div>`;
+  document.getElementById('detail-overlay').classList.add('open');
+}
+
+function closeDetail(e) {
+  if (!e || e.target.classList.contains('backdrop') || e.target.id==='detail-overlay') {
+    document.getElementById('detail-overlay').classList.remove('open');
+  }
+}
+
+/* ── ADVANCE STATUS ── */
+function advanceStatus(id) {
+  const order = ['pending','assigned','active','done'];
+  const s = surgeries.find(x=>x.id===id);
+  if (!s || s.status==='done') { showToast('La cirugía ya está completada','info'); return; }
+  const idx = order.indexOf(s.status);
+  s.status = order[idx+1];
+  s.updatedAt = new Date().toISOString();
+  save(); renderTable(); showDetail(id);
+  showToast(`Estado → ${STATUS_LABEL[s.status]}`,'success');
+}
+
+/* ── EXPORT CSV ── */
+function exportCSV() {
+  const cols = ['Código','Fecha','Paciente','Procedimiento','Cirujano','Hospital','Colaborador','Estado','Prioridad','Material','Notas'];
+  const rows = surgeries.map(s => {
+    const c = collabById(s.collabId);
+    return [s.code, s.date, s.patient, s.procedure, s.surgeon, s.hospital,
+            c?c.name:'Sin asignar', STATUS_LABEL[s.status], PRIO_LABEL[s.priority],
+            s.material||'', s.notes||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',');
+  });
+  const csv = [cols.join(','), ...rows].join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `surgitack_export_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('CSV exportado correctamente','success');
+}
+
+/* ── TOAST ── */
+function showToast(msg, type='info') {
+  const icons = { success:'✅', error:'🗑', info:'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<span class="toast-icon">${icons[type]||'•'}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateX(20px)'; el.style.transition='all .3s'; setTimeout(()=>el.remove(),300); }, 3000);
+}
+
+/* ── DEMO DATA ── */
+function seedDemo() {
+  const demo = [
+    { patient:'Roberto Figueroa',  procedure:'Artrodesis tobillo',     date:'2025-03-03T08:30', surgeon:'Dr. Soto',    hospital:'Clínica Las Condes',   collabId:'c1', status:'done',     priority:'alta',  material:'Placa DePuy 3.5mm', notes:'Paciente diabético, protocolo especial.' },
+    { patient:'Marcela Riquelme', procedure:'Hallux valgus bilateral', date:'2025-03-05T10:00', surgeon:'Dra. Muñoz', hospital:'Clínica Alemana',      collabId:'c2', status:'done',     priority:'media', material:'Tornillos Synthes 2.7mm', notes:'' },
+    { patient:'Jorge Palacios',   procedure:'Fractura calcáneo',       date:'2025-03-08T07:00', surgeon:'Dr. Pardo',  hospital:'Hospital UC',          collabId:'c1', status:'assigned', priority:'alta',  material:'Placa calcáneo LCP', notes:'Control preoperatorio pendiente.' },
+    { patient:'Camila Vega',      procedure:'Reconstrucción LCA',      date:'2025-03-10T09:15', surgeon:'Dr. Vera',   hospital:'Clínica Las Condes',   collabId:'c3', status:'active',   priority:'alta',  material:'Sistema TightRope, anclas Arthrex', notes:'En pabellón desde 09:30.' },
+    { patient:'Pedro Salas',      procedure:'Amputación metatarso',    date:'2025-03-10T13:00', surgeon:'Dra. Lagos', hospital:'Hospital Barros Luco', collabId:'',   status:'pending',  priority:'alta',  material:'Por confirmar', notes:'Urgencia vascular.' },
+    { patient:'Francisca León',   procedure:'Osteotomía tibial alta',  date:'2025-03-14T08:00', surgeon:'Dr. Soto',   hospital:'Clínica Alemana',      collabId:'c2', status:'assigned', priority:'media', material:'Clavo Synthes Expert', notes:'' },
+    { patient:'Andrés Morales',   procedure:'Hallux rigidus',          date:'2025-03-17T11:00', surgeon:'Dr. Ramírez',hospital:'Hospital UC',          collabId:'',   status:'pending',  priority:'baja',  material:'Por confirmar', notes:'' },
+    { patient:'Valentina Ríos',   procedure:'Ligamentoplastía tobillo',date:'2025-03-21T07:30', surgeon:'Dra. Muñoz', hospital:'Clínica Las Condes',   collabId:'c4', status:'assigned', priority:'media', material:'Aloinjerto Achilles', notes:'' },
+    { patient:'Sebastián Moya',   procedure:'Fusión subtalar',         date:'2025-03-24T09:00', surgeon:'Dr. Vera',   hospital:'Clínica Alemana',      collabId:'c3', status:'assigned', priority:'media', material:'Tornillo canulado 7mm', notes:'Revisar alergias.' },
+    { patient:'Isabel Cárdenas',  procedure:'Revisión prótesis tobillo',date:'2025-03-28T08:30',surgeon:'Dr. Pardo',  hospital:'Hospital UC',          collabId:'',   status:'pending',  priority:'alta',  material:'Por confirmar', notes:'Segunda cirugía, primera fue 2023.' },
+    { patient:'Luis Contreras',   procedure:'Artroscopia tobillo',     date:'2025-04-02T10:00', surgeon:'Dr. Soto',   hospital:'Clínica Las Condes',   collabId:'c5', status:'assigned', priority:'baja',  material:'Kit artroscopia Stryker', notes:'' },
+    { patient:'María José Torres',procedure:'Neuroma de Morton',       date:'2025-04-08T08:00', surgeon:'Dra. Muñoz', hospital:'Clínica Alemana',      collabId:'c2', status:'pending',  priority:'media', material:'Por confirmar', notes:'' },
+  ];
+  surgeries = demo.map(d => ({
+    id: uid(),
+    code: makeCode(d.date),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...d
+  }));
+  save();
+  renderTable();
+  showToast('Datos de demostración cargados','success');
+}
+
+/* ── INIT ── */
+load();
+populateSelects();
+renderTable();
+if (!surgeries.length) {
+  document.getElementById('page-subtitle').textContent = 'Sin cirugías. Haz clic en "Demo" para cargar ejemplos.';
+}
+</script>
+
+</body>
+</html>
